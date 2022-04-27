@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.elastic.co/apm/module/apmgin/v2"
 	"go.elastic.co/apm/module/apmgrpc/v2"
@@ -40,7 +41,8 @@ func main() {
 	r.GET("/", func(cc *gin.Context) {
 		//tx := apm.DefaultTracer().StartTransaction("name-transaction-1", "type-transaction")
 		//ctx := apm.ContextWithTransaction(context.Background(), tx)
-
+		//span, ctx := apm.StartSpan(cc.Request.Context(), "server2", "endpoint-server2")
+		//defer span.End()
 		r, err := c.CallTwo(cc.Request.Context(), &pb.HelloRequest{Name: *name})
 		if err != nil {
 			apm.CaptureError(cc.Request.Context(), err).Send()
@@ -51,7 +53,7 @@ func main() {
 		cc.String(http.StatusOK, "Hello, %s!")
 	})
 	r.GET("/next", func(cc *gin.Context) {
-		log.Printf("next")
+		fmt.Println("next", cc.Request.Header)
 		cc.String(http.StatusOK, "Hello, %s!")
 	})
 	r.Run(":8001")

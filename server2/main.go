@@ -8,6 +8,7 @@ import (
 	"go.elastic.co/apm/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	pb "grpc-tracer/proto/server12"
 	pb23 "grpc-tracer/proto/server23"
 	"log"
@@ -28,10 +29,18 @@ type server struct {
 // SayHello implements helloworld.GreeterServer
 func (s *server) CallTwo(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
 	log.Printf("Received: %v", in.GetName())
+	//tx := apm.TransactionFromContext(/ctx)
+	//cc := tx.TraceContext()
+	//fmt.Println(cc.Trace.String())
+	//fmt.Println(cc.Span.String())
 	//span, ctx := apm.StartSpan(ctx, "server2", "endpoint-server2")
 	//defer span.End()
-
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		fmt.Println(md)
+	}
 	r, err := client.CallThree(ctx, &pb23.HelloRequest{Name: "name 2"})
+
 	if err != nil {
 		log.Println("could not greet: %v", err)
 		apm.CaptureError(ctx, err).Send()
@@ -43,7 +52,8 @@ func (s *server) CallTwo(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRep
 
 func main() {
 	flag.Parse()
-	conn, err := grpc.Dial("localhost:8003", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithUnaryInterceptor(apmgrpc.NewUnaryClientInterceptor()))
+	conn, err := grpc.Dial("localhost:8003",
+		grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithUnaryInterceptor(apmgrpc.NewUnaryClientInterceptor()))
 	if err != nil {
 		log.Println("err", err)
 	}
