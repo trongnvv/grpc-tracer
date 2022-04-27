@@ -1,0 +1,30 @@
+version: "3"
+services:
+    elasticsearch:
+      image: docker.elastic.co/elasticsearch/elasticsearch:7.8.0
+      ports:
+        - "9200:9200"
+        - "9300:9300"
+      environment:
+        - discovery.type=single-node
+    kibana:
+      image: docker.elastic.co/kibana/kibana:7.8.0
+      ports:
+        - "5601:5601"
+      links:
+        - elasticsearch
+      depends_on:
+        - elasticsearch
+    apm-server:
+      command: --strict.perms=false
+      image: docker.elastic.co/apm/apm-server:7.8.0
+#      user: root
+      ports:
+        - "8200:8200"
+      volumes:
+        - ./.apm-server.yml:/usr/share/apm-server/apm-server.yml
+      depends_on:
+        - elasticsearch
+      links:
+        - elasticsearch
+        - kibana
