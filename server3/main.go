@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/valyala/fasthttp"
@@ -15,6 +14,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 )
 
 var (
@@ -30,11 +30,11 @@ type server struct {
 func (s *server) CallThree(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
 	//span, ctx := apm.StartSpan(ctx, "server3", "endpoint-server3")
 	//span.End()
-	err := callApi(ctx)
-	if err != nil {
-		log.Println(err)
-		return nil, errors.New("")
-	}
+	//err := callApi(ctx)
+	//if err != nil {
+	//	log.Println(err)
+	//	return nil, errors.New("")
+	//}
 	log.Printf("Received: %v", in.GetName())
 	return &pb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
@@ -70,6 +70,9 @@ func callApi(ctx context.Context) error {
 
 func main() {
 	flag.Parse()
+
+	os.Setenv("ELASTIC_APM_SERVER_URL", "http://192.168.55.54:9965")
+	os.Setenv("ELASTIC_APM_SECRET_TOKEN", "UDVySFJZQUIxTlk3MzBzVVhwLTg6MmFkbkJsTExUd21CNldWa2NwaFhSdw==")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		log.Println("failed to listen: %v", err)
@@ -86,7 +89,6 @@ func main() {
 			apmgrpc.WithRecovery(),
 		)))
 	defer s.GracefulStop()
-
 	pb.RegisterGreeterServer(s, &server{})
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {

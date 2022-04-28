@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"go.elastic.co/apm/module/apmgin/v2"
 	"go.elastic.co/apm/module/apmgrpc/v2"
 	"go.elastic.co/apm/v2"
@@ -23,10 +25,30 @@ var (
 	name = flag.String("name", defaultName, "Name to greet")
 )
 
+func customUnaryClientInterceptor() grpc.UnaryClientInterceptor {
+	return func(
+		ctx context.Context,
+		method string,
+		req, resp interface{},
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption,
+	) error {
+		apm.SpanFromContext(ctx).Context.SetLabel("request", req)
+		return invoker(ctx, method, req, resp, cc, opts...)
+	}
+}
+
 func main() {
 	flag.Parse()
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithUnaryInterceptor(apmgrpc.NewUnaryClientInterceptor()))
+	conn, err := grpc.Dial(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(
+			grpc_middleware.ChainUnaryClient(
+				apmgrpc.NewUnaryClientInterceptor(),
+				customUnaryClientInterceptor(),
+			),
+		))
 	if err != nil {
 		log.Println("did not connect: %v", err)
 	}
