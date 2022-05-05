@@ -42,16 +42,19 @@ func (s *server) CallTwo(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRep
 	//if ok {
 	//	fmt.Println(md)
 	//}
+	go func() {
+		var c context.Context
+		c = apm.DetachedContext(ctx)
 
-	r, err := client.CallThree(ctx, &pb23.HelloRequest{Name: "name 2"})
+		r, err := client.CallThree(c, &pb23.HelloRequest{Name: "name 2"})
 
-	if err != nil {
-		log.Println("could not greet: %v", err)
-		apm.CaptureError(ctx, err).Send()
-		return nil, err
-	}
-
-	log.Printf("Greeting: %s", r.GetMessage())
+		if err != nil {
+			log.Println("could not greet: %v", err)
+			apm.CaptureError(c, err).Send()
+		}
+		//c.Done()
+		log.Printf("Greeting: %s", r.GetMessage())
+	}()
 	return &pb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
@@ -75,12 +78,15 @@ func customUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 		req interface{},
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
-	) (interface{}, error) {
-		//tx := apm.TransactionFromContext(ctx)
-		fmt.Println("***********server*******", req)
-		//tx.Context.SetLabel("request-s", req)
-		//tx.Context.SetLabel("response-s", resp)
-		return handler(ctx, req)
+	) (resp interface{}, err error) {
+		resp, err = handler(ctx, req)
+		tx := apm.TransactionFromContext(ctx)
+		if tx != nil {
+			tx.Context.SetLabel("request", req)
+			tx.Context.SetLabel("response", resp)
+		}
+		fmt.Println("***********server*******", resp)
+		return resp, err
 	}
 }
 
