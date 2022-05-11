@@ -69,9 +69,6 @@ func callApi(ctx context.Context) error {
 
 func main() {
 	flag.Parse()
-
-	//os.Setenv("ELASTIC_APM_SERVER_URL", "http://192.168.55.54:9965")
-	//os.Setenv("ELASTIC_APM_SECRET_TOKEN", "UDVySFJZQUIxTlk3MzBzVVhwLTg6MmFkbkJsTExUd21CNldWa2NwaFhSdw==")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		log.Println("failed to listen: %v", err)
